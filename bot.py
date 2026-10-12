@@ -773,7 +773,7 @@ def handle_all_messages(message):
             reply_markup=get_main_inline_kb(user_id)
         )
 
-# --- АВТОМАТИЧЕСКИЙ БЕСКОНЕЧНЫЙ ЦИКЛ ЗАПУСКА (АМОРТИЗАЦИЯ ОШИБОК) ---
+# --- БЕСКОНЕЧНЫЙ ЦИКЛ С АВТОПЕРЕЗАПУСКОМ ---
 if __name__ == '__main__':
     while True:
         try:
@@ -781,5 +781,5 @@ if __name__ == '__main__':
             print("🚀 Бот Prince Russia успешно запущен!")
             bot.infinity_polling(timeout=20, long_polling_timeout=10)
         except Exception as e:
-            print(f"⚠️ Перехват ошибки: {e}. Перезапуск через 5 секунд...")
+            print(f"⚠️ Ошибка соединения: {e}. Перезапуск через 5 секунд...")
             time.sleep(5)
