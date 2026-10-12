@@ -21,7 +21,7 @@ def load_data():
         "all_users": {DEV_ID},
         "banned_users": set(),
         "username_to_id": {},
-        "allowed_usernames": [],  # Выдача по username до первого захода
+        "allowed_usernames": [],  
         "user_scores": {},
         "test_server_open": True
     }
@@ -30,7 +30,6 @@ def load_data():
             with open(DB_FILE, "r", encoding="utf-8") as f:
                 data = json.load(f)
                 
-                # Преобразуем списки из JSON в множества set(), чтобы работали .add() и .discard()
                 admins = set(data.get("admins", [DEV_ID]))
                 admins.add(DEV_ID)
                 
@@ -91,7 +90,6 @@ def register_user(user):
     uname = user.username.lower() if user.username else None
     if uname:
         db["username_to_id"][uname] = user_id
-        # Автовыдача прав при первом входе, если выдали заранее по @username
         if uname in db["allowed_usernames"]:
             db["admins"].add(user_id)
             if str(user_id) not in db["admin_prefixes"]:
@@ -100,7 +98,6 @@ def register_user(user):
 
     save_data()
 
-    # Уведомление Команде Проекта о новом игроке
     if is_new and user_id not in db["admins"]:
         username_str = f"@{user.username}" if user.username else "<i>Отсутствует</i>"
         notify_text = (
@@ -777,5 +774,5 @@ def handle_all_messages(message):
 
 if __name__ == '__main__':
     bot.remove_webhook()
-    print("Бот Prince Russia без ошибок запущен!")
+    print("Бот Prince Russia успешно запущен!")
     bot.infinity_polling()
