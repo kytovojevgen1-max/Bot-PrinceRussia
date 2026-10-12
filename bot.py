@@ -3,14 +3,15 @@ from telebot import types
 import random
 import json
 import os
+import time
 
-TOKEN = "8854430576:AAHZxONh73HyuGLgW92Jj8W3JhdemLNjrA4"
-DEV_ID = 8543358373  # Ваш Telegram ID (Разработчик)
+TOKEN = "8854430576:AAEeshmD2TplVT54t5BJYB5hPHaUCNClTv4"
+DEV_ID = 8543358373  # Твой Telegram ID (Разработчик)
 
 bot = telebot.TeleBot(TOKEN)
 DB_FILE = "database.json"
 
-# Роли, которые имеют право выдавать и менять префиксы (от Зам. Владельца и выше)
+# Роли, которые имеют право выдавать и менять префиксы
 CAN_MANAGE_PREFIXES = ["💻 Разработчик", "👑 Владелец Проекта", "🔱 Зам. Владельца"]
 
 # --- ИНИЦИАЛИЗАЦИЯ И СОХРАНЕНИЕ БАЗЫ ДАННЫХ ---
@@ -23,7 +24,7 @@ def load_data():
         "username_to_id": {},
         "allowed_usernames": [],  
         "user_scores": {},
-        "test_server_open": False  # ПО УМОЛЧАНИЮ ЗАКРЫТО!
+        "test_server_open": False  # ПО УМОЛЧАНИЮ ВСЕГДА ЗАКРЫТО!
     }
     if os.path.exists(DB_FILE):
         try:
@@ -49,7 +50,7 @@ def load_data():
                     "username_to_id": data.get("username_to_id", {}),
                     "allowed_usernames": data.get("allowed_usernames", []),
                     "user_scores": data.get("user_scores", {}),
-                    "test_server_open": data.get("test_server_open", False)  # Если нет в БД — закрыто!
+                    "test_server_open": data.get("test_server_open", False)
                 }
         except Exception:
             return default_data
@@ -772,7 +773,13 @@ def handle_all_messages(message):
             reply_markup=get_main_inline_kb(user_id)
         )
 
+# --- АВТОМАТИЧЕСКИЙ БЕСКОНЕЧНЫЙ ЦИКЛ ЗАПУСКА (АМОРТИЗАЦИЯ ОШИБОК) ---
 if __name__ == '__main__':
-    bot.remove_webhook()
-    print("Бот Prince Russia успешно запущен!")
-    bot.infinity_polling()
+    while True:
+        try:
+            bot.remove_webhook(drop_pending_updates=True)
+            print("🚀 Бот Prince Russia успешно запущен!")
+            bot.infinity_polling(timeout=20, long_polling_timeout=10)
+        except Exception as e:
+            print(f"⚠️ Перехват ошибки: {e}. Перезапуск через 5 секунд...")
+            time.sleep(5)
