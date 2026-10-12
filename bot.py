@@ -4,12 +4,30 @@ import random
 import json
 import os
 import time
+from flask import Flask
+from threading import Thread
 
 TOKEN = "8854430576:AAEeshmD2TplVT54t5BJYB5hPHaUCNClTv4"
-DEV_ID = 8543358373  # Ваш Telegram ID (Разработчик)
+DEV_ID = 8543358373  # Твой Telegram ID (Разработчик)
 
 bot = telebot.TeleBot(TOKEN)
 DB_FILE = "database.json"
+
+# --- МИНИ-СЕРВЕР ДЛЯ RENDER (ЧТОБЫ БОТ РАБОТАЛ 24/7 БЕЗ ВЫЛЕТОВ) ---
+app = Flask('')
+
+@app.route('/')
+def home():
+    return "Bot is alive and running 24/7!"
+
+def run_web():
+    app.run(host='0.0.0.0', port=8080)
+
+def keep_alive():
+    t = Thread(target=run_web)
+    t.daemon = True
+    t.start()
+# ------------------------------------------------------------------
 
 # Роли, которые имеют право выдавать и менять префиксы
 CAN_MANAGE_PREFIXES = ["💻 Разработчик", "👑 Владелец Проекта", "🔱 Зам. Владельца"]
@@ -534,7 +552,7 @@ def process_add_admin(message):
         if not input_data.isdigit():
             db["allowed_usernames"].append(input_data)
             save_data()
-            bot.send_message(message.chat.id, f"⏳ Пользователь <code>@{input_data}</code> еще не запускал бота.\n<b>Права зарезервированы!</b> При старте бота ему выдастся роль <b>🛡 Главный Администратор</b>.", parse_mode="HTML")
+            bot.send_message(message.chat.id, f"⏳ Пользователь <code>@{input_data}</code> еще не запускал бота. Права зарезервированы!", parse_mode="HTML")
         else:
             bot.send_message(message.chat.id, "❌ Пользователь с таким ID не найден.")
 
@@ -773,12 +791,13 @@ def handle_all_messages(message):
             reply_markup=get_main_inline_kb(user_id)
         )
 
-# --- НАДЕЖНЫЙ ЗАПУСК С АВТОПЕРЕЗАПУСКОМ ПРИ ЛАГАХ СЕТИ ---
+# --- ЗАПУСК БОТА + ВЕБ-СЕРВЕР ДЛЯ 24/7 РАБОТЫ ---
 if __name__ == '__main__':
+    keep_alive()  # надежный запуск веб-сервера на порту 8080
     while True:
         try:
             bot.remove_webhook(drop_pending_updates=True)
-            print("🚀 Бот Prince Russia успешно запущен!")
+            print("🚀 Бот Prince Russia успешно запущен и работает 24/7!")
             bot.polling(none_stop=True, interval=0, timeout=20)
         except Exception as e:
             print(f"⚠️ Ошибка сети или Telegram API: {e}. Перезапуск через 5 секунд...")
