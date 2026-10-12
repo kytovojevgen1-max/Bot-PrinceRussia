@@ -4,7 +4,7 @@ import random
 import json
 import os
 
-TOKEN = "8854430576:AAGDUzRNstP58pQuGIOx8hX9iKBC6YKOvPI"
+TOKEN = "8854430576:AAHZxONh73HyuGLgW92Jj8W3JhdemLNjrA4"
 DEV_ID = 8543358373  # Ваш Telegram ID (Разработчик)
 
 bot = telebot.TeleBot(TOKEN)
@@ -83,7 +83,7 @@ def register_user(user):
 
     save_data()
 
-    # Если пользователь зашел в бота ВПЕРВЫЕ — отправляем красиво оформленное уведомление всем админам
+    # Уведомление Команде Проекта о новом игроке
     if is_new and user_id not in db["admins"]:
         username_str = f"@{user.username}" if user.username else "<i>Отсутствует</i>"
         notify_text = (
@@ -760,5 +760,5 @@ def handle_all_messages(message):
 
 if __name__ == '__main__':
     bot.remove_webhook()
-    print("Бот Prince Russia с уведомлениями о заходах запущен...")
+    print("Бот Prince Russia с новым токеном запущен...")
     bot.infinity_polling()
