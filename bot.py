@@ -9,6 +9,7 @@ bot = telebot.TeleBot(TOKEN)
 # Базы данных в памяти
 admins = {SUPER_ADMIN_ID}
 all_users = set()
+banned_users = set()
 username_to_id = {}
 user_states = {}
 admin_reply_targets = {}  # admin_id -> target_user_id
@@ -28,6 +29,10 @@ def get_main_inline_kb(user_id):
     )
     kb.add(
         types.InlineKeyboardButton("🛠 Тех. Поддержка", callback_data="btn_support"),
+        types.InlineKeyboardButton("❓ Частые Вопросы (FAQ)", callback_data="btn_faq")
+    )
+    kb.add(
+        types.InlineKeyboardButton("📜 Правила", callback_data="btn_rules"),
         types.InlineKeyboardButton("🌐 Наши Ресурсы", callback_data="btn_links")
     )
     if user_id in admins:
@@ -57,6 +62,9 @@ def get_admin_inline_kb():
     kb.add(
         types.InlineKeyboardButton("➕ Добавить админа", callback_data="adm_add"),
         types.InlineKeyboardButton("➖ Удалить админа", callback_data="adm_remove"),
+        types.InlineKeyboardButton("🔒 Забанить юзера", callback_data="adm_ban"),
+        types.InlineKeyboardButton("🔓 Разбанить юзера", callback_data="adm_unban"),
+        types.InlineKeyboardButton("✉️ Сообщение по ID", callback_data="adm_send_direct"),
         types.InlineKeyboardButton("📋 Список админов", callback_data="adm_list"),
         types.InlineKeyboardButton("📊 Статистика", callback_data="adm_stats"),
         types.InlineKeyboardButton("📢 Рассылка", callback_data="adm_broadcast"),
@@ -80,7 +88,7 @@ def start_cmd(message):
     welcome_text = (
         "<b>✨ Добро пожаловать на проект Prince Russia!</b>\n"
         "───────────────────────────────\n"
-        "Вы находитесь в официальном боте поддержки и сервисов проекта.\n\n"
+        "Вы находитесь в официальном многофункциональном боте проекта.\n\n"
         "<b>Выберите нужный раздел кнопкой ниже:</b>"
     )
     bot.send_message(user_id, welcome_text, parse_mode="HTML", reply_markup=get_main_inline_kb(user_id))
@@ -94,11 +102,38 @@ def admin_cmd(message):
     else:
         bot.send_message(user_id, "❌ У вас нет доступа к этой команде.")
 
+@bot.message_handler(commands=['faq'])
+def faq_cmd(message):
+    user_id = message.chat.id
+    show_faq(user_id)
+
+def show_faq(user_id, message_id=None):
+    faq_text = (
+        "<b>❓ Частые вопросы (FAQ) — Prince Russia</b>\n"
+        "───────────────────────────────\n"
+        "<b>1. Как начать играть?</b>\n"
+        "<i>Скачайте наш лаунчер на официальном сайте или в VK и установите его на телефон.</i>\n\n"
+        "<b>2. Как восстановить пароль от аккаунта?</b>\n"
+        "<i>Обратитесь в тех. поддержку через этот бот или напишите на форум в специальный раздел.</i>\n\n"
+        "<b>3. Где купить донат / валюту?</b>\n"
+        "<i>Используйте раздел «🛒 Донат Магазин» в меню нашего бота.</i>"
+    )
+    kb = types.InlineKeyboardMarkup()
+    kb.add(types.InlineKeyboardButton("🔙 Назад в меню", callback_data="btn_main_menu"))
+    if message_id:
+        bot.edit_message_text(faq_text, chat_id=user_id, message_id=message_id, parse_mode="HTML", reply_markup=kb)
+    else:
+        bot.send_message(user_id, faq_text, parse_mode="HTML", reply_markup=kb)
+
 # --- ОБРАБОТКА ИНЛАЙН КНОПОК ---
 @bot.callback_query_handler(func=lambda call: True)
 def callback_handler(call):
     user_id = call.message.chat.id
     register_user(call.from_user)
+
+    if user_id in banned_users:
+        bot.answer_callback_query(call.id, "⛔️ Вы заблокированы в боте!", show_alert=True)
+        return
 
     # Главное меню
     if call.data == "btn_main_menu":
@@ -125,7 +160,27 @@ def callback_handler(call):
         kb.add(types.InlineKeyboardButton("🔙 Назад", callback_data="btn_main_menu"))
         bot.edit_message_text(shop_text, chat_id=user_id, message_id=call.message.message_id, parse_mode="HTML", reply_markup=kb, disable_web_page_preview=True)
 
-    # Наши Ресурсы (Ссылки)
+    # Правила
+    elif call.data == "btn_rules":
+        rules_text = (
+            "<b>📜 Правила проекта Prince Russia</b>\n"
+            "───────────────────────────────\n"
+            "1. Запрещено оскорбление игроков и администрации.\n"
+            "2. Запрещено использование стороннего ПО (читов/скриптов).\n"
+            "3. Запрещен спам и реклама сторонних ресурсов в боте.\n"
+            "4. Совершая покупки, вы соглашаетесь с условиями проекта.\n\n"
+            "Полный свод правил читайте на нашем форуме!"
+        )
+        kb = types.InlineKeyboardMarkup()
+        kb.add(types.InlineKeyboardButton("💬 Форум правил", url="https://forum-prince-russia.samp.date"))
+        kb.add(types.InlineKeyboardButton("🔙 Назад в меню", callback_data="btn_main_menu"))
+        bot.edit_message_text(rules_text, chat_id=user_id, message_id=call.message.message_id, parse_mode="HTML", reply_markup=kb)
+
+    # FAQ
+    elif call.data == "btn_faq":
+        show_faq(user_id, call.message.message_id)
+
+    # Ресурсы
     elif call.data == "btn_links":
         links_text = (
             "<b>🌐 Официальные ресурсы Prince Russia</b>\n"
@@ -140,7 +195,7 @@ def callback_handler(call):
         text = (
             "<b>💡 Раздел предложений и улучшений</b>\n"
             "───────────────────────────────\n"
-            "Напишите ваше предложение или идею для проекта прямо сейчас (можно прикрепить фото или видео):"
+            "Напишите ваше предложение или идею прямо сейчас (можно прикрепить фото или видео):"
         )
         bot.edit_message_text(text, chat_id=user_id, message_id=call.message.message_id, parse_mode="HTML", reply_markup=get_cancel_inline_kb())
 
@@ -175,7 +230,7 @@ def callback_handler(call):
             return
         target_id = int(call.data.replace("reply_to_", ""))
         admin_reply_targets[user_id] = target_id
-        bot.send_message(user_id, f"📝 <b>Введите ответ для пользователя (ID: <code>{target_id}</code>):</b>\n<i>Ответ уйдет анонимно от имени бота.</i>", parse_mode="HTML", reply_markup=get_cancel_inline_kb())
+        bot.send_message(user_id, f"📝 <b>Введите ответ для пользователя (ID: <code>{target_id}</code>):</b>\n<i>Пользователь увидит ваш юзернейм при ответе.</i>", parse_mode="HTML", reply_markup=get_cancel_inline_kb())
 
     # Админские фичи
     elif call.data == "adm_stats":
@@ -184,7 +239,8 @@ def callback_handler(call):
                 "<b>📊 Статистика проекта Prince Russia:</b>\n"
                 "───────────────────────────────\n"
                 f"👤 Всего пользователей: <b>{len(all_users)}</b>\n"
-                f"🛠 Администраторов: <b>{len(admins)}</b>"
+                f"🛠 Администраторов: <b>{len(admins)}</b>\n"
+                f"🚫 В бане: <b>{len(banned_users)}</b>"
             )
             kb = types.InlineKeyboardMarkup()
             kb.add(types.InlineKeyboardButton("🔙 В админ-панель", callback_data="btn_admin_panel"))
@@ -199,6 +255,21 @@ def callback_handler(call):
         if user_id in admins:
             msg = bot.send_message(user_id, "Введите @username или Telegram ID для снятия админки:", reply_markup=get_cancel_inline_kb())
             bot.register_next_step_handler(msg, process_remove_admin)
+
+    elif call.data == "adm_ban":
+        if user_id in admins:
+            msg = bot.send_message(user_id, "Введите @username или ID пользователя для блокировки в боте:", reply_markup=get_cancel_inline_kb())
+            bot.register_next_step_handler(msg, process_ban_user)
+
+    elif call.data == "adm_unban":
+        if user_id in admins:
+            msg = bot.send_message(user_id, "Введите @username или ID пользователя для разблокировки:", reply_markup=get_cancel_inline_kb())
+            bot.register_next_step_handler(msg, process_unban_user)
+
+    elif call.data == "adm_send_direct":
+        if user_id in admins:
+            msg = bot.send_message(user_id, "Введите Telegram ID пользователя, которому хотите написать лично:", reply_markup=get_cancel_inline_kb())
+            bot.register_next_step_handler(msg, process_direct_msg_id)
 
     elif call.data == "adm_list":
         if user_id in admins:
@@ -225,7 +296,7 @@ def process_add_admin(message):
         admins.add(target_id)
         bot.send_message(message.chat.id, f"✅ Пользователь <code>{target_id}</code> назначен администратором!", parse_mode="HTML")
         try:
-            bot.send_message(target_id, "🎉 <b>Вам выданы права администратора Prince Russia!</b>\nНажмите /menu для доступа к панелям.", parse_mode="HTML")
+            bot.send_message(target_id, "🎉 <b>Вам выданы права администратора Prince Russia!</b>\nНажмите /menu для доступа.", parse_mode="HTML")
         except Exception: pass
     else:
         bot.send_message(message.chat.id, "❌ Пользователь не найден. Он должен запустить бота через /start.")
@@ -244,6 +315,40 @@ def process_remove_admin(message):
     else:
         bot.send_message(message.chat.id, "❌ Пользователь не найден.")
 
+def process_ban_user(message):
+    if message.text in ["❌ Отмена", "/cancel"]: return
+    input_data = message.text.strip().replace("@", "").lower()
+    target_id = username_to_id.get(input_data) or (int(input_data) if input_data.isdigit() else None)
+
+    if target_id:
+        if target_id in admins:
+            bot.send_message(message.chat.id, "❌ Нельзя заблокировать администратора!")
+            return
+        banned_users.add(target_id)
+        bot.send_message(message.chat.id, f"⛔️ Пользователь <code>{target_id}</code> заблокирован в боте.", parse_mode="HTML")
+    else:
+        bot.send_message(message.chat.id, "❌ Пользователь не найден.")
+
+def process_unban_user(message):
+    if message.text in ["❌ Отмена", "/cancel"]: return
+    input_data = message.text.strip().replace("@", "").lower()
+    target_id = username_to_id.get(input_data) or (int(input_data) if input_data.isdigit() else None)
+
+    if target_id in banned_users:
+        banned_users.remove(target_id)
+        bot.send_message(message.chat.id, f"✅ Пользователь <code>{target_id}</code> разблокирован.", parse_mode="HTML")
+    else:
+        bot.send_message(message.chat.id, "❌ Пользователь не найден в списке забаненных.")
+
+def process_direct_msg_id(message):
+    if message.text in ["❌ Отмена", "/cancel"]: return
+    if message.text.isdigit():
+        target_id = int(message.text)
+        admin_reply_targets[message.chat.id] = target_id
+        msg = bot.send_message(message.chat.id, f"📝 Напишите сообщение, которое сразу уйдёт пользователю <code>{target_id}</code>:", parse_mode="HTML", reply_markup=get_cancel_inline_kb())
+    else:
+        bot.send_message(message.chat.id, "❌ Введите корректный числовой Telegram ID.")
+
 def process_broadcast(message):
     if message.text in ["❌ Отмена", "/cancel"]: return
     count = 0
@@ -260,22 +365,33 @@ def handle_all_messages(message):
     user_id = message.chat.id
     register_user(message.from_user)
 
-    # Игнорируем обычный ввод текста, если пользователь не в режиме ввода идеи/поддержки или админ не в режиме ответа
+    if user_id in banned_users:
+        bot.send_message(user_id, "⛔️ Вы заблокированы в боте и не можете отправлять сообщения.")
+        return
+
     state = user_states.get(user_id)
     is_replying = user_id in admins and admin_reply_targets.get(user_id)
 
     # 1. Если АДМИН отвечает пользователю
     if is_replying:
         target_id = admin_reply_targets[user_id]
+        
+        # Формируем подпись с указанием юзернейма админа
+        admin_username = f"@{message.from_user.username}" if message.from_user.username else message.from_user.first_name
+        role_label = "👑 Владелец проекта" if user_id == SUPER_ADMIN_ID else "🛡 Администратор"
+        
+        header_text = f"<b>{role_label} ({admin_username}) ответил на ваше обращение:</b>\n"
+        
         try:
+            bot.send_message(target_id, header_text, parse_mode="HTML")
             bot.copy_message(target_id, message.chat.id, message.message_id)
-            bot.send_message(user_id, "✅ <b>Ответ успешно отправлен от имени бота!</b>", parse_mode="HTML")
+            bot.send_message(user_id, f"✅ <b>Ответ успешно отправлен пользователю <code>{target_id}</code>!</b>", parse_mode="HTML")
             admin_reply_targets[user_id] = None
         except Exception as e:
             bot.send_message(user_id, f"❌ Ошибка отправки: {e}")
         return
 
-    # 2. Если ПОЛЬЗОВАТЕЛЬ находится в режиме записи идеи или обращения в тех. поддержку
+    # 2. Если ПОЛЬЗОВАТЕЛЬ в режиме ввода обращения/идеи
     elif state in ['idea', 'support']:
         user_info = f"👤 <b>От:</b> {message.from_user.first_name}"
         if message.from_user.username:
@@ -289,7 +405,7 @@ def handle_all_messages(message):
         else:
             card_header = "🛠 <b>[ОБРАЩЕНИЕ В ТЕХ. ПОДДЕРЖКУ]</b>\n" + user_info
 
-        # Отправляем карточку обращения администраторам
+        # Отправляем карточку админам
         for admin_id in admins:
             try:
                 bot.send_message(admin_id, card_header, parse_mode="HTML")
@@ -303,15 +419,15 @@ def handle_all_messages(message):
 
         user_states[user_id] = None
 
-    # 3. Если просто написали текст без выбора раздела
+    # 3. Обычное сообщение вне режима ввода
     else:
         bot.send_message(
             user_id, 
-            "ℹ️ Воспользуйтесь кнопками ниже, чтобы выбрать нужный раздел:", 
+            "ℹ️ Воспользуйтесь меню ниже для взаимодействия с ботом:", 
             reply_markup=get_main_inline_kb(user_id)
         )
 
 if __name__ == '__main__':
     bot.remove_webhook()
-    print("Обновленный бот Prince Russia запущен...")
+    print("Бот Prince Russia с функцией юзернеймов запущен...")
     bot.infinity_polling()
