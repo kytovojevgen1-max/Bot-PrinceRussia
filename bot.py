@@ -28,10 +28,23 @@ def get_main_inline_kb(user_id):
     )
     kb.add(
         types.InlineKeyboardButton("🛠 Тех. Поддержка", callback_data="btn_support"),
-        types.InlineKeyboardButton("ℹ️ О проекте", callback_data="btn_info")
+        types.InlineKeyboardButton("🌐 Наши Ресурсы", callback_data="btn_links")
     )
     if user_id in admins:
         kb.add(types.InlineKeyboardButton("⚙️ Админ-Панель", callback_data="btn_admin_panel"))
+    return kb
+
+def get_links_inline_kb():
+    kb = types.InlineKeyboardMarkup(row_width=2)
+    kb.add(
+        types.InlineKeyboardButton("🌐 Наш Сайт", url="https://site-prince-russia.samp.date"),
+        types.InlineKeyboardButton("💬 Наш Форум", url="https://forum-prince-russia.samp.date")
+    )
+    kb.add(
+        types.InlineKeyboardButton("📢 Telegram Канал", url="https://t.me/prince_russiaa"),
+        types.InlineKeyboardButton("🔹 Сообщество VK", url="https://vk.ru/princerussiaa")
+    )
+    kb.add(types.InlineKeyboardButton("🔙 Назад в меню", callback_data="btn_main_menu"))
     return kb
 
 def get_cancel_inline_kb():
@@ -47,7 +60,7 @@ def get_admin_inline_kb():
         types.InlineKeyboardButton("📋 Список админов", callback_data="adm_list"),
         types.InlineKeyboardButton("📊 Статистика", callback_data="adm_stats"),
         types.InlineKeyboardButton("📢 Рассылка", callback_data="adm_broadcast"),
-        types.InlineKeyboardButton("🔙 В главное меню", callback_data="btn_main_menu")
+        types.InlineKeyboardButton("🔙 Главное меню", callback_data="btn_main_menu")
     )
     return kb
 
@@ -56,8 +69,8 @@ def get_reply_keyboard(target_user_id):
     kb.add(types.InlineKeyboardButton("💬 Ответить пользователю", callback_data=f"reply_to_{target_user_id}"))
     return kb
 
-# --- КОМАНДЫ /START И /CANCEL ---
-@bot.message_handler(commands=['start', 'cancel'])
+# --- КОМАНДЫ БОТА ---
+@bot.message_handler(commands=['start', 'menu', 'cancel'])
 def start_cmd(message):
     user_id = message.chat.id
     register_user(message.from_user)
@@ -68,11 +81,20 @@ def start_cmd(message):
         "<b>✨ Добро пожаловать на проект Prince Russia!</b>\n"
         "───────────────────────────────\n"
         "Вы находитесь в официальном боте поддержки и сервисов проекта.\n\n"
-        "<b>Выберите нужный раздел ниже:</b>"
+        "<b>Выберите нужный раздел кнопкой ниже:</b>"
     )
     bot.send_message(user_id, welcome_text, parse_mode="HTML", reply_markup=get_main_inline_kb(user_id))
 
-# --- ОБРАБОТКА ВСЕХ INLINE-КНОПОК ---
+@bot.message_handler(commands=['admin'])
+def admin_cmd(message):
+    user_id = message.chat.id
+    register_user(message.from_user)
+    if user_id in admins:
+        bot.send_message(user_id, "<b>⚙️ Панель управления администратора:</b>", parse_mode="HTML", reply_markup=get_admin_inline_kb())
+    else:
+        bot.send_message(user_id, "❌ У вас нет доступа к этой команде.")
+
+# --- ОБРАБОТКА ИНЛАЙН КНОПОК ---
 @bot.callback_query_handler(func=lambda call: True)
 def callback_handler(call):
     user_id = call.message.chat.id
@@ -81,6 +103,7 @@ def callback_handler(call):
     # Главное меню
     if call.data == "btn_main_menu":
         user_states[user_id] = None
+        admin_reply_targets[user_id] = None
         welcome_text = (
             "<b>✨ Главное меню Prince Russia</b>\n"
             "───────────────────────────────\n"
@@ -88,12 +111,12 @@ def callback_handler(call):
         )
         bot.edit_message_text(welcome_text, chat_id=user_id, message_id=call.message.message_id, parse_mode="HTML", reply_markup=get_main_inline_kb(user_id))
 
-    # Донат магазин
+    # Донат Магазин
     elif call.data == "btn_shop":
         shop_text = (
             "<b>🛒 Донат Магазин проекта Prince Russia</b>\n"
             "───────────────────────────────\n"
-            "Для покупки игровой валюты, привилегий или донат-пакетов обращайтесь к ручной администрации:\n\n"
+            "Для покупки игровой валюты, привилегий или донат-пакетов обращайтесь к администрации:\n\n"
             "🔹 <b>Telegram:</b> @AsikWhiskey\n"
             "🔹 <b>ВКонтакте:</b> https://vk.com/asik_whiskey\n\n"
             "⚠️ <i>Покупки совершаются только через официальные контакты!</i>"
@@ -102,13 +125,22 @@ def callback_handler(call):
         kb.add(types.InlineKeyboardButton("🔙 Назад", callback_data="btn_main_menu"))
         bot.edit_message_text(shop_text, chat_id=user_id, message_id=call.message.message_id, parse_mode="HTML", reply_markup=kb, disable_web_page_preview=True)
 
-    # Идеи / Улучшения
+    # Наши Ресурсы (Ссылки)
+    elif call.data == "btn_links":
+        links_text = (
+            "<b>🌐 Официальные ресурсы Prince Russia</b>\n"
+            "───────────────────────────────\n"
+            "Присоединяйтесь к нашим сообществам и будьте в курсе всех новостей проекта:"
+        )
+        bot.edit_message_text(links_text, chat_id=user_id, message_id=call.message.message_id, parse_mode="HTML", reply_markup=get_links_inline_kb())
+
+    # Предложения
     elif call.data == "btn_idea":
         user_states[user_id] = 'idea'
         text = (
             "<b>💡 Раздел предложений и улучшений</b>\n"
             "───────────────────────────────\n"
-            "Напишите ваше предложение или идею для проекта. Вы можете прикрепить скриншоты или видео:"
+            "Напишите ваше предложение или идею для проекта прямо сейчас (можно прикрепить фото или видео):"
         )
         bot.edit_message_text(text, chat_id=user_id, message_id=call.message.message_id, parse_mode="HTML", reply_markup=get_cancel_inline_kb())
 
@@ -118,24 +150,11 @@ def callback_handler(call):
         text = (
             "<b>🛠 Техническая поддержка</b>\n"
             "───────────────────────────────\n"
-            "Подробно опишите вашу проблему или задайте вопрос. Наша команда ответит вам в ближайшее время!"
+            "Опишите вашу проблему или задайте вопрос сообщением ниже. Наша команда ответит вам!"
         )
         bot.edit_message_text(text, chat_id=user_id, message_id=call.message.message_id, parse_mode="HTML", reply_markup=get_cancel_inline_kb())
 
-    # Инфо
-    elif call.data == "btn_info":
-        text = (
-            "<b>ℹ️ Информация о проекте</b>\n"
-            "───────────────────────────────\n"
-            "👑 <b>Проект:</b> Prince Russia\n"
-            "🤖 <b>Версия бота:</b> 3.0 Ultra\n"
-            "⚡️ <b>Режим работы:</b> 24/7 Онлайн"
-        )
-        kb = types.InlineKeyboardMarkup()
-        kb.add(types.InlineKeyboardButton("🔙 Назад", callback_data="btn_main_menu"))
-        bot.edit_message_text(text, chat_id=user_id, message_id=call.message.message_id, parse_mode="HTML", reply_markup=kb)
-
-    # Отмена действия
+    # Отмена
     elif call.data == "btn_cancel":
         user_states[user_id] = None
         admin_reply_targets[user_id] = None
@@ -149,16 +168,16 @@ def callback_handler(call):
         else:
             bot.answer_callback_query(call.id, "Доступ запрещен!", show_alert=True)
 
-    # Кнопка ответа для админов
+    # Ответ пользователю
     elif call.data.startswith("reply_to_"):
         if user_id not in admins:
-            bot.answer_callback_query(call.id, "У вас нет прав админа!", show_alert=True)
+            bot.answer_callback_query(call.id, "У вас нет прав!", show_alert=True)
             return
         target_id = int(call.data.replace("reply_to_", ""))
         admin_reply_targets[user_id] = target_id
-        bot.send_message(user_id, f"📝 <b>Впишите ответ пользователю (ID: <code>{target_id}</code>):</b>\n<i>Ответ уйдет анонимно от имени бота.</i>", parse_mode="HTML", reply_markup=get_cancel_inline_kb())
+        bot.send_message(user_id, f"📝 <b>Введите ответ для пользователя (ID: <code>{target_id}</code>):</b>\n<i>Ответ уйдет анонимно от имени бота.</i>", parse_mode="HTML", reply_markup=get_cancel_inline_kb())
 
-    # Админские функции
+    # Админские фичи
     elif call.data == "adm_stats":
         if user_id in admins:
             text = (
@@ -193,12 +212,12 @@ def callback_handler(call):
 
     elif call.data == "adm_broadcast":
         if user_id in admins:
-            msg = bot.send_message(user_id, "Отправьте сообщение/пост для массовой рассылки:", reply_markup=get_cancel_inline_kb())
+            msg = bot.send_message(user_id, "Отправьте пост/сообщение для массовой рассылки:", reply_markup=get_cancel_inline_kb())
             bot.register_next_step_handler(msg, process_broadcast)
 
-# --- ВПОМОГАТЕЛЬНЫЕ ФУНКЦИИ АДМИНКИ ---
+# --- ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ---
 def process_add_admin(message):
-    if message.text == "❌ Отмена": return
+    if message.text in ["❌ Отмена", "/cancel"]: return
     input_data = message.text.strip().replace("@", "").lower()
     target_id = username_to_id.get(input_data) or (int(input_data) if input_data.isdigit() else None)
 
@@ -206,13 +225,13 @@ def process_add_admin(message):
         admins.add(target_id)
         bot.send_message(message.chat.id, f"✅ Пользователь <code>{target_id}</code> назначен администратором!", parse_mode="HTML")
         try:
-            bot.send_message(target_id, "🎉 <b>Вам выданы права администратора Prince Russia!</b>\nНажмите /start для обновления доступа.", parse_mode="HTML")
+            bot.send_message(target_id, "🎉 <b>Вам выданы права администратора Prince Russia!</b>\nНажмите /menu для доступа к панелям.", parse_mode="HTML")
         except Exception: pass
     else:
         bot.send_message(message.chat.id, "❌ Пользователь не найден. Он должен запустить бота через /start.")
 
 def process_remove_admin(message):
-    if message.text == "❌ Отмена": return
+    if message.text in ["❌ Отмена", "/cancel"]: return
     input_data = message.text.strip().replace("@", "").lower()
     target_id = username_to_id.get(input_data) or (int(input_data) if input_data.isdigit() else None)
 
@@ -226,7 +245,7 @@ def process_remove_admin(message):
         bot.send_message(message.chat.id, "❌ Пользователь не найден.")
 
 def process_broadcast(message):
-    if message.text == "❌ Отмена": return
+    if message.text in ["❌ Отмена", "/cancel"]: return
     count = 0
     for uid in list(all_users):
         try:
@@ -235,27 +254,29 @@ def process_broadcast(message):
         except Exception: pass
     bot.send_message(message.chat.id, f"📢 <b>Рассылка завершена!</b>\nУспешно доставлено: {count}/{len(all_users)} пользователей.", parse_mode="HTML")
 
-# --- ОБРАБОТКА ВСЕХ СООБЩЕНИЙ ---
+# --- ОБРАБОТКА ВХОДЯЩИХ СООБЩЕНИЙ ---
 @bot.message_handler(content_types=['text', 'photo', 'video', 'voice', 'video_note', 'document', 'sticker'])
 def handle_all_messages(message):
     user_id = message.chat.id
     register_user(message.from_user)
 
-    # 1. Если АДМИН в режиме ответа
-    if user_id in admins and admin_reply_targets.get(user_id):
+    # Игнорируем обычный ввод текста, если пользователь не в режиме ввода идеи/поддержки или админ не в режиме ответа
+    state = user_states.get(user_id)
+    is_replying = user_id in admins and admin_reply_targets.get(user_id)
+
+    # 1. Если АДМИН отвечает пользователю
+    if is_replying:
         target_id = admin_reply_targets[user_id]
         try:
             bot.copy_message(target_id, message.chat.id, message.message_id)
-            bot.send_message(user_id, "✅ <b>Ответ успешно отправлен пользователю от имени бота!</b>", parse_mode="HTML")
+            bot.send_message(user_id, "✅ <b>Ответ успешно отправлен от имени бота!</b>", parse_mode="HTML")
             admin_reply_targets[user_id] = None
         except Exception as e:
             bot.send_message(user_id, f"❌ Ошибка отправки: {e}")
         return
 
-    # 2. Если пишет ОБЫЧНЫЙ ПОЛЬЗОВАТЕЛЬ
-    if user_id not in admins or (user_id in admins and not admin_reply_targets.get(user_id)):
-        state = user_states.get(user_id, 'support')
-        
+    # 2. Если ПОЛЬЗОВАТЕЛЬ находится в режиме записи идеи или обращения в тех. поддержку
+    elif state in ['idea', 'support']:
         user_info = f"👤 <b>От:</b> {message.from_user.first_name}"
         if message.from_user.username:
             user_info += f" (@{message.from_user.username})\n"
@@ -268,7 +289,7 @@ def handle_all_messages(message):
         else:
             card_header = "🛠 <b>[ОБРАЩЕНИЕ В ТЕХ. ПОДДЕРЖКУ]</b>\n" + user_info
 
-        # Отправка админам
+        # Отправляем карточку обращения администраторам
         for admin_id in admins:
             try:
                 bot.send_message(admin_id, card_header, parse_mode="HTML")
@@ -276,13 +297,21 @@ def handle_all_messages(message):
             except Exception: pass
 
         if state == 'idea':
-            bot.send_message(user_id, "💡 <b>Спасибо!</b> Ваша идея отправлена разработчикам.", parse_mode="HTML", reply_markup=get_main_inline_kb(user_id))
+            bot.send_message(user_id, "💡 <b>Спасибо!</b> Ваша идея принята и передана разработчикам.", parse_mode="HTML", reply_markup=get_main_inline_kb(user_id))
         else:
-            bot.send_message(user_id, "📩 <b>Ваше сообщение доставлено!</b> Ожидайте ответа от администрации.", parse_mode="HTML", reply_markup=get_main_inline_kb(user_id))
+            bot.send_message(user_id, "📩 <b>Ваше обращение доставлено!</b> Ожидайте ответа от администрации.", parse_mode="HTML", reply_markup=get_main_inline_kb(user_id))
 
         user_states[user_id] = None
 
+    # 3. Если просто написали текст без выбора раздела
+    else:
+        bot.send_message(
+            user_id, 
+            "ℹ️ Воспользуйтесь кнопками ниже, чтобы выбрать нужный раздел:", 
+            reply_markup=get_main_inline_kb(user_id)
+        )
+
 if __name__ == '__main__':
     bot.remove_webhook()
-    print("Бот Prince Russia 3.0 Ultra запущен...")
+    print("Обновленный бот Prince Russia запущен...")
     bot.infinity_polling()
