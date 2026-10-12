@@ -759,7 +759,7 @@ def handle_all_messages(message):
         }
 
         user_info = f"👤 <b>От:</b> {message.from_user.first_name}"
-        if message.from_user.username:
+        if message.from_username:
             user_info += f" (@{message.from_user.username})\n"
         else:
             user_info += "\n"
@@ -793,10 +793,10 @@ def handle_all_messages(message):
 
 # --- ЗАПУСК БОТА + ВЕБ-СЕРВЕР ДЛЯ 24/7 РАБОТЫ ---
 if __name__ == '__main__':
-    keep_alive()  # надежный запуск веб-сервера на порту 8080
+    keep_alive()  # Запуск веб-сервера на порту 8080 для Render
     while True:
         try:
-            bot.remove_webhook(drop_pending_updates=True)
+            bot.remove_webhook()
             print("🚀 Бот Prince Russia успешно запущен и работает 24/7!")
             bot.polling(none_stop=True, interval=0, timeout=20)
         except Exception as e:
