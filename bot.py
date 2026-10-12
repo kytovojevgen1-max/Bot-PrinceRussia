@@ -14,13 +14,16 @@ all_users = set()
 banned_users = set()
 username_to_id = {}
 user_states = {}
-admin_reply_targets = {}  # admin_id -> target_user_id
-user_last_messages = {}   # user_id -> dict with 'type', 'text'
-games = {}                # user_id -> secret_number
+admin_reply_targets = {}   # admin_id -> target_user_id
+user_last_messages = {}    # user_id -> dict
+games = {}                 # user_id -> dict (secret, attempts, max_val, reward)
+user_scores = {}           # user_id -> coins
 
 # --- СЛУЖЕБНЫЕ ФУНКЦИИ ---
 def register_user(user):
     all_users.add(user.id)
+    if user.id not in user_scores:
+        user_scores[user.id] = 0
     if user.username:
         username_to_id[user.username.lower()] = user.id
 
@@ -33,7 +36,7 @@ def get_main_inline_kb(user_id):
     )
     kb.add(
         types.InlineKeyboardButton("🛠 Тех. Поддержка", callback_data="btn_support"),
-        types.InlineKeyboardButton("🎮 Мини-Игра", callback_data="btn_game")
+        types.InlineKeyboardButton("🎮 Игра (Prince Coins)", callback_data="btn_game")
     )
     kb.add(
         types.InlineKeyboardButton("❓ FAQ / Вопросы", callback_data="btn_faq"),
@@ -43,7 +46,7 @@ def get_main_inline_kb(user_id):
         types.InlineKeyboardButton("🌐 Наши Ресурсы", callback_data="btn_links")
     )
     if user_id in admins:
-        kb.add(types.InlineKeyboardButton("⚙️ Панель Разработчика / Админа", callback_data="btn_admin_panel"))
+        kb.add(types.InlineKeyboardButton("⚙️ Панель Управления", callback_data="btn_admin_panel"))
     return kb
 
 def get_links_inline_kb():
@@ -69,7 +72,7 @@ def get_admin_inline_kb(user_id):
     kb.add(
         types.InlineKeyboardButton("➕ Добавить админа", callback_data="adm_add"),
         types.InlineKeyboardButton("➖ Удалить админа", callback_data="adm_remove"),
-        types.InlineKeyboardButton("🏷 Выдать префикс", callback_data="adm_prefix"),
+        types.InlineKeyboardButton("🏷 Изменить префикс", callback_data="adm_prefix"),
         types.InlineKeyboardButton("🔒 Забанить", callback_data="adm_ban"),
         types.InlineKeyboardButton("🔓 Разбанить", callback_data="adm_unban"),
         types.InlineKeyboardButton("✉️ Написать по ID", callback_data="adm_send_direct"),
@@ -77,6 +80,16 @@ def get_admin_inline_kb(user_id):
         types.InlineKeyboardButton("📊 Статистика", callback_data="adm_stats"),
         types.InlineKeyboardButton("📢 Рассылка", callback_data="adm_broadcast"),
         types.InlineKeyboardButton("🔙 Главное меню", callback_data="btn_main_menu")
+    )
+    return kb
+
+def get_game_inline_kb():
+    kb = types.InlineKeyboardMarkup(row_width=1)
+    kb.add(
+        types.InlineKeyboardButton("🟢 Легкий (1-10) | +10 Coins", callback_data="game_easy"),
+        types.InlineKeyboardButton("🟡 Средний (1-50) | +50 Coins", callback_data="game_medium"),
+        types.InlineKeyboardButton("🔴 Хардкор (1-100) | +150 Coins", callback_data="game_hard"),
+        types.InlineKeyboardButton("🔙 Назад в меню", callback_data="btn_main_menu")
     )
     return kb
 
@@ -93,10 +106,12 @@ def start_cmd(message):
     user_states[user_id] = None
     admin_reply_targets[user_id] = None
 
+    coins = user_scores.get(user_id, 0)
     welcome_text = (
         "<b>✨ Добро пожаловать на проект Prince Russia!</b>\n"
         "───────────────────────────────\n"
         "Официальный многофункциональный бот поддержки и сервисов проекта.\n\n"
+        f"💰 Ваш баланс: <b>{coins} Prince Coins</b>\n\n"
         "<b>Выберите нужный раздел кнопкой ниже:</b>"
     )
     bot.send_message(user_id, welcome_text, parse_mode="HTML", reply_markup=get_main_inline_kb(user_id))
@@ -109,28 +124,6 @@ def admin_cmd(message):
         bot.send_message(user_id, "<b>⚙️ Панель Управления:</b>", parse_mode="HTML", reply_markup=get_admin_inline_kb(user_id))
     else:
         bot.send_message(user_id, "❌ У вас нет доступа к этой команде.")
-
-@bot.message_handler(commands=['game'])
-def game_cmd(message):
-    user_id = message.chat.id
-    start_game(user_id)
-
-def start_game(user_id, message_id=None):
-    secret = random.randint(1, 10)
-    games[user_id] = secret
-    user_states[user_id] = 'playing_game'
-
-    text = (
-        "<b>🎮 Мини-Игра «Угадай число»!</b>\n"
-        "───────────────────────────────\n"
-        "Я загадал число от <b>1 до 10</b>.\n"
-        "Попробуй угадать его! Напиши число прямо в чат:"
-    )
-    kb = get_cancel_inline_kb()
-    if message_id:
-        bot.edit_message_text(text, chat_id=user_id, message_id=message_id, parse_mode="HTML", reply_markup=kb)
-    else:
-        bot.send_message(user_id, text, parse_mode="HTML", reply_markup=kb)
 
 # --- ОБРАБОТКА ИНЛАЙН КНОПОК ---
 @bot.callback_query_handler(func=lambda call: True)
@@ -146,9 +139,11 @@ def callback_handler(call):
     if call.data == "btn_main_menu":
         user_states[user_id] = None
         admin_reply_targets[user_id] = None
+        coins = user_scores.get(user_id, 0)
         welcome_text = (
             "<b>✨ Главное меню Prince Russia</b>\n"
             "───────────────────────────────\n"
+            f"💰 Ваш баланс: <b>{coins} Prince Coins</b>\n\n"
             "Выберите интересующий вас раздел:"
         )
         bot.edit_message_text(welcome_text, chat_id=user_id, message_id=call.message.message_id, parse_mode="HTML", reply_markup=get_main_inline_kb(user_id))
@@ -167,9 +162,42 @@ def callback_handler(call):
         kb.add(types.InlineKeyboardButton("🔙 Назад", callback_data="btn_main_menu"))
         bot.edit_message_text(shop_text, chat_id=user_id, message_id=call.message.message_id, parse_mode="HTML", reply_markup=kb, disable_web_page_preview=True)
 
-    # Игра
+    # Игра Выбор Сложности
     elif call.data == "btn_game":
-        start_game(user_id, call.message.message_id)
+        coins = user_scores.get(user_id, 0)
+        text = (
+            "<b>🎮 Мини-Игра «Числовая Рулетка»</b>\n"
+            "───────────────────────────────\n"
+            f"💰 Ваш баланс: <b>{coins} Prince Coins</b>\n\n"
+            "Угадайте загаданное число и получайте монеты!\n"
+            "Выберите уровень сложности:"
+        )
+        bot.edit_message_text(text, chat_id=user_id, message_id=call.message.message_id, parse_mode="HTML", reply_markup=get_game_inline_kb())
+
+    # Старт уровней игры
+    elif call.data in ["game_easy", "game_medium", "game_hard"]:
+        if call.data == "game_easy":
+            max_val, reward = 10, 10
+        elif call.data == "game_medium":
+            max_val, reward = 50, 50
+        else:
+            max_val, reward = 100, 150
+
+        games[user_id] = {
+            'secret': random.randint(1, max_val),
+            'attempts': 0,
+            'max_val': max_val,
+            'reward': reward
+        }
+        user_states[user_id] = 'playing_game'
+
+        text = (
+            f"🎯 <b>Загадано число от 1 до {max_val}!</b>\n"
+            "───────────────────────────────\n"
+            f"🏆 Награда за победу: <b>+{reward} Coins</b>\n"
+            "Напишите ваш вариант числа прямо в чат:"
+        )
+        bot.edit_message_text(text, chat_id=user_id, message_id=call.message.message_id, parse_mode="HTML", reply_markup=get_cancel_inline_kb())
 
     # Правила
     elif call.data == "btn_rules":
@@ -215,7 +243,8 @@ def callback_handler(call):
         text = (
             "<b>💡 Раздел предложений и улучшений</b>\n"
             "───────────────────────────────\n"
-            "Напишите вашу идею прямо сейчас (можно прикрепить фото или видео):"
+            "Напишите вашу идею прямо сейчас!\n"
+            "<i>Принимаются: текст, фото, видео, GIF, голосовые и файлы.</i>"
         )
         bot.edit_message_text(text, chat_id=user_id, message_id=call.message.message_id, parse_mode="HTML", reply_markup=get_cancel_inline_kb())
 
@@ -225,7 +254,8 @@ def callback_handler(call):
         text = (
             "<b>🛠 Техническая поддержка</b>\n"
             "───────────────────────────────\n"
-            "Опишите вашу проблему или вопрос. Вы можете отправить текст, фото или видео!"
+            "Опишите вашу проблему или вопрос ниже.\n"
+            "<i>Вы можете отправить: текст, фото, видео, GIF, голосовое, кружочек или документ.</i>"
         )
         bot.edit_message_text(text, chat_id=user_id, message_id=call.message.message_id, parse_mode="HTML", reply_markup=get_cancel_inline_kb())
 
@@ -250,9 +280,9 @@ def callback_handler(call):
             return
         target_id = int(call.data.replace("reply_to_", ""))
         admin_reply_targets[user_id] = target_id
-        bot.send_message(user_id, f"📝 <b>Введите ответ пользователю (ID: <code>{target_id}</code>):</b>", parse_mode="HTML", reply_markup=get_cancel_inline_kb())
+        bot.send_message(user_id, f"📝 <b>Введите ответ пользователю (ID: <code>{target_id}</code>):</b>\n<i>Можно отправлять текст, фото, видео, GIF и любые медиа!</i>", parse_mode="HTML", reply_markup=get_cancel_inline_kb())
 
-    # Админские функции
+    # Функции админов
     elif call.data == "adm_stats":
         if user_id in admins:
             text = (
@@ -278,7 +308,7 @@ def callback_handler(call):
 
     elif call.data == "adm_prefix":
         if user_id == DEV_ID:
-            msg = bot.send_message(user_id, "Введите ID или @username админа и через пробел префикс.\nПример: <code>@username [Гл. Администратор]</code>", parse_mode="HTML", reply_markup=get_cancel_inline_kb())
+            msg = bot.send_message(user_id, "Введите ID или @username (можно свой) и через пробел новый префикс.\n\nПример себе: <code>8543358373 👑 Разработчик</code>\nПример админу: <code>@username [Гл. Администратор]</code>", parse_mode="HTML", reply_markup=get_cancel_inline_kb())
             bot.register_next_step_handler(msg, process_set_prefix)
         else:
             bot.answer_callback_query(call.id, "Только Разработчик может изменять префиксы!", show_alert=True)
@@ -354,11 +384,11 @@ def process_set_prefix(message):
 
         if target_id and target_id in admins:
             admin_prefixes[target_id] = new_prefix
-            bot.send_message(message.chat.id, f"✅ Для админа <code>{target_id}</code> установлен префикс: <b>{new_prefix}</b>", parse_mode="HTML")
+            bot.send_message(message.chat.id, f"✅ Для пользователя <code>{target_id}</code> установлен префикс: <b>{new_prefix}</b>", parse_mode="HTML")
         else:
             bot.send_message(message.chat.id, "❌ Пользователь не найден среди администраторов.")
     except Exception:
-        bot.send_message(message.chat.id, "❌ Неверный формат! Вводите так: <code>@username [Префикс]</code>", parse_mode="HTML")
+        bot.send_message(message.chat.id, "❌ Неверный формат! Вводите так: <code>ID_или_username [Префикс]</code>", parse_mode="HTML")
 
 def process_ban_user(message):
     if message.text in ["❌ Отмена", "/cancel"]: return
@@ -405,7 +435,7 @@ def process_broadcast(message):
     bot.send_message(message.chat.id, f"📢 <b>Рассылка завершена!</b>\nДоставлено: {count}/{len(all_users)}", parse_mode="HTML")
 
 # --- ОБРАБОТКА ВХОДЯЩИХ СООБЩЕНИЙ ---
-@bot.message_handler(content_types=['text', 'photo', 'video', 'voice', 'video_note', 'document', 'sticker'])
+@bot.message_handler(content_types=['text', 'photo', 'video', 'animation', 'voice', 'video_note', 'document', 'sticker', 'audio'])
 def handle_all_messages(message):
     user_id = message.chat.id
     register_user(message.from_user)
@@ -417,31 +447,43 @@ def handle_all_messages(message):
     state = user_states.get(user_id)
     is_replying = user_id in admins and admin_reply_targets.get(user_id)
 
-    # 🎮 Мини-игра «Угадай число»
+    # 🎮 ИГРА «УГАДАЙ ЧИСЛО»
     if state == 'playing_game' and message.content_type == 'text':
         if message.text.isdigit():
             val = int(message.text)
-            secret = games.get(user_id, 5)
+            gdata = games.get(user_id, {'secret': 5, 'attempts': 0, 'reward': 10})
+            gdata['attempts'] += 1
+            secret = gdata['secret']
+
             if val == secret:
-                bot.send_message(user_id, f"🎉 <b>ПОЗДРАВЛЯЕМ!</b> Вы угадали число {secret}!", parse_mode="HTML", reply_markup=get_main_inline_kb(user_id))
+                user_scores[user_id] += gdata['reward']
+                tot_coins = user_scores[user_id]
+                bot.send_message(
+                    user_id, 
+                    f"🎉 <b>ПОЗДРАВЛЯЕМ! Вы угадали число {secret}!</b>\n"
+                    f"⏱ Попыток использовано: <b>{gdata['attempts']}</b>\n"
+                    f"💰 Получено: <b>+{gdata['reward']} Prince Coins</b>\n"
+                    f"🏦 Ваш итоговый баланс: <b>{tot_coins} Coins</b>", 
+                    parse_mode="HTML", 
+                    reply_markup=get_main_inline_kb(user_id)
+                )
                 user_states[user_id] = None
             elif val < secret:
-                bot.send_message(user_id, "📉 Мое число <b>БОЛЬШЕ</b>! Попробуй еще раз:", parse_mode="HTML")
+                bot.send_message(user_id, f"📉 Загаданное число <b>БОЛЬШЕ</b> чем {val}! Попробуй еще раз (Попытка {gdata['attempts']}):", parse_mode="HTML")
             else:
-                bot.send_message(user_id, "📈 Мое число <b>МЕНЬШЕ</b>! Попробуй еще раз:", parse_mode="HTML")
+                bot.send_message(user_id, f"📈 Загаданное число <b>МЕНЬШЕ</b> чем {val}! Попробуй еще раз (Попытка {gdata['attempts']}):", parse_mode="HTML")
         return
 
-    # 1. Если АДМИН отвечает пользователю (с красочным цитированием!)
+    # 1. Если АДМИН отвечает пользователю
     if is_replying:
         target_id = admin_reply_targets[user_id]
         
         prefix = admin_prefixes.get(user_id, "🛡 Администратор")
         admin_uname = f"@{message.from_user.username}" if message.from_user.username else message.from_user.first_name
 
-        # Формируем цитирование предыдущего обращения
         last_info = user_last_messages.get(target_id, {})
         m_type = last_info.get('type', 'сообщение')
-        m_text = last_info.get('text', 'Прикрепленный медиафайл')
+        m_text = last_info.get('text', 'Прикрепленный медиафайл/GIF')
 
         quote_box = (
             f"<b>{prefix} ({admin_uname}) ответил на ваше {m_type}:</b>\n"
@@ -460,12 +502,11 @@ def handle_all_messages(message):
             bot.send_message(user_id, f"❌ Ошибка отправки: {e}")
         return
 
-    # 2. Если ПОЛЬЗОВАТЕЛЬ отправляет идею или обращение
+    # 2. Если ПОЛЬЗОВАТЕЛЬ отправляет обращение/идею (любое медиа + GIF)
     elif state in ['idea', 'support']:
         msg_type_str = "предложение" if state == 'idea' else "обращение"
         msg_text_str = message.text or message.caption or f"[{message.content_type.upper()}]"
 
-        # Сохраняем в память для цитирования
         user_last_messages[user_id] = {
             'type': msg_type_str,
             'text': msg_text_str
@@ -483,7 +524,6 @@ def handle_all_messages(message):
         else:
             card_header = "🛠 <b>[ОБРАЩЕНИЕ В ТЕХ. ПОДДЕРЖКУ]</b>\n" + user_info
 
-        # Рассылка карточки админам
         for admin_id in admins:
             try:
                 bot.send_message(admin_id, card_header, parse_mode="HTML")
@@ -507,5 +547,5 @@ def handle_all_messages(message):
 
 if __name__ == '__main__':
     bot.remove_webhook()
-    print("Бот Prince Russia 4.0 Ultra (Разработчик) запущен...")
+    print("Бот Prince Russia 5.0 Ultra Pro запущен...")
     bot.infinity_polling()
