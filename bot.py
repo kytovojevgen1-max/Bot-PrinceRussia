@@ -16,10 +16,10 @@ CAN_MANAGE_PREFIXES = ["💻 Разработчик", "👑 Владелец П�
 # --- ИНИЦИАЛИЗАЦИЯ И СОХРАНЕНИЕ БАЗЫ ДАННЫХ ---
 def load_data():
     default_data = {
-        "admins": [DEV_ID],
+        "admins": {DEV_ID},
         "admin_prefixes": {str(DEV_ID): "💻 Разработчик"},
-        "all_users": [DEV_ID],
-        "banned_users": [],
+        "all_users": {DEV_ID},
+        "banned_users": set(),
         "username_to_id": {},
         "allowed_usernames": [],  # Выдача по username до первого захода
         "user_scores": {},
@@ -29,12 +29,29 @@ def load_data():
         try:
             with open(DB_FILE, "r", encoding="utf-8") as f:
                 data = json.load(f)
-                data["admins"] = set(data.get("admins", [DEV_ID]))
-                data["admins"].add(DEV_ID)
-                data["all_users"] = set(data.get("all_users", []))
-                data["banned_users"] = set(data.get("banned_users", []))
-                data["admin_prefixes"][str(DEV_ID)] = "💻 Разработчик"
-                return data
+                
+                # Преобразуем списки из JSON в множества set(), чтобы работали .add() и .discard()
+                admins = set(data.get("admins", [DEV_ID]))
+                admins.add(DEV_ID)
+                
+                all_users = set(data.get("all_users", [DEV_ID]))
+                all_users.add(DEV_ID)
+                
+                banned_users = set(data.get("banned_users", []))
+                
+                admin_prefixes = data.get("admin_prefixes", {})
+                admin_prefixes[str(DEV_ID)] = "💻 Разработчик"
+
+                return {
+                    "admins": admins,
+                    "admin_prefixes": admin_prefixes,
+                    "all_users": all_users,
+                    "banned_users": banned_users,
+                    "username_to_id": data.get("username_to_id", {}),
+                    "allowed_usernames": data.get("allowed_usernames", []),
+                    "user_scores": data.get("user_scores", {}),
+                    "test_server_open": data.get("test_server_open", True)
+                }
         except Exception:
             return default_data
     return default_data
@@ -760,5 +777,5 @@ def handle_all_messages(message):
 
 if __name__ == '__main__':
     bot.remove_webhook()
-    print("Бот Prince Russia с новым токеном запущен...")
+    print("Бот Prince Russia без ошибок запущен!")
     bot.infinity_polling()
