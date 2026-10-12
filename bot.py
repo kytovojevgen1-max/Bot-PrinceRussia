@@ -6,7 +6,7 @@ import os
 import time
 
 TOKEN = "8854430576:AAEeshmD2TplVT54t5BJYB5hPHaUCNClTv4"
-DEV_ID = 8543358373  # Твой Telegram ID (Разработчик)
+DEV_ID = 8543358373  # Ваш Telegram ID (Разработчик)
 
 bot = telebot.TeleBot(TOKEN)
 DB_FILE = "database.json"
@@ -773,13 +773,13 @@ def handle_all_messages(message):
             reply_markup=get_main_inline_kb(user_id)
         )
 
-# --- БЕСКОНЕЧНЫЙ ЦИКЛ С АВТОПЕРЕЗАПУСКОМ ---
+# --- НАДЕЖНЫЙ ЗАПУСК С АВТОПЕРЕЗАПУСКОМ ПРИ ЛАГАХ СЕТИ ---
 if __name__ == '__main__':
     while True:
         try:
             bot.remove_webhook(drop_pending_updates=True)
             print("🚀 Бот Prince Russia успешно запущен!")
-            bot.infinity_polling(timeout=20, long_polling_timeout=10)
+            bot.polling(none_stop=True, interval=0, timeout=20)
         except Exception as e:
-            print(f"⚠️ Ошибка соединения: {e}. Перезапуск через 5 секунд...")
+            print(f"⚠️ Ошибка сети или Telegram API: {e}. Перезапуск через 5 секунд...")
             time.sleep(5)
