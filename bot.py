@@ -23,7 +23,7 @@ def load_data():
         "username_to_id": {},
         "allowed_usernames": [],  
         "user_scores": {},
-        "test_server_open": True
+        "test_server_open": False  # ПО УМОЛЧАНИЮ ЗАКРЫТО!
     }
     if os.path.exists(DB_FILE):
         try:
@@ -49,7 +49,7 @@ def load_data():
                     "username_to_id": data.get("username_to_id", {}),
                     "allowed_usernames": data.get("allowed_usernames", []),
                     "user_scores": data.get("user_scores", {}),
-                    "test_server_open": data.get("test_server_open", True)
+                    "test_server_open": data.get("test_server_open", False)  # Если нет в БД — закрыто!
                 }
         except Exception:
             return default_data
