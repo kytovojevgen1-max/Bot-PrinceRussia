@@ -8,7 +8,7 @@ from flask import Flask
 from threading import Thread
 
 # --- НАСТРОЙКИ ---
-TOKEN = "8854430576:AAG5XqMZjIJtCG202WtUgU6PFbX-iy1gQU4"
+TOKEN = "8854430576:AAHf40hrIusUWGqWjLmp-q2M3okeMsMrw6w"
 DEV_ID = 8543358373  # Твой Telegram ID
 
 bot = telebot.TeleBot(TOKEN)
