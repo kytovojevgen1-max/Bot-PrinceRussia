@@ -259,7 +259,8 @@ def start_cmd(message):
         f"Управляйте всеми функциями через кнопки ниже:"
     )
     bot.send_message(user_id, text, parse_mode="HTML", reply_markup=get_main_inline_kb(user_id))
-    @bot.callback_query_handler(func=lambda call: True)
+
+@bot.callback_query_handler(func=lambda call: True)
 def callback_handler(call):
     user_id = call.message.chat.id
     register_user(call.from_user)
