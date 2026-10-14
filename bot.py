@@ -791,14 +791,25 @@ def handle_all_messages(message):
             reply_markup=get_main_inline_kb(user_id)
         )
 
-# --- ЗАПУСК БОТА + ВЕБ-СЕРВЕР ДЛЯ 24/7 РАБОТЫ ---
+def run_web():
+    app.run(host='0.0.0.0', port=8080)
+
+def keep_alive():
+    t = Thread(target=run_web)
+    t.daemon = True
+    t.start()
+
+# --- ЗАПУСК БОТА ---
 if __name__ == '__main__':
-    keep_alive()  # Запуск веб-сервера на порту 8080 для Render
+    keep_alive()  # Запускаем Flask в ФОНОВОМ ПОТОКЕ!
+    time.sleep(1)
+    
+    print("🚀 Запускаем опрос Telegram...")
     while True:
         try:
             bot.remove_webhook()
-            print("🚀 Бот Prince Russia успешно запущен и работает 24/7!")
+            print("✅ Бот Prince Russia успешно запущен и отвечает на команды!")
             bot.polling(none_stop=True, interval=0, timeout=20)
         except Exception as e:
-            print(f"⚠️ Ошибка сети или Telegram API: {e}. Перезапуск через 5 секунд...")
+            print(f"⚠️ Ошибка сети: {e}. Перезапуск через 5 сек...")
             time.sleep(5)
