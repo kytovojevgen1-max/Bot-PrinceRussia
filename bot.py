@@ -7,7 +7,7 @@ import time
 from flask import Flask
 from threading import Thread
 
-TOKEN = "8854430576:AAHf40hrIusUWGqWjLmp-q2M3okeMsMrw6w"
+TOKEN = "8854430576:AAFmXNrlGrJSfbxMSINFC8tQkX-NVbSjM2w"
 DEV_ID = 8543358373  # Твой Telegram ID (Разработчик)
 
 bot = telebot.TeleBot(TOKEN)
@@ -18,7 +18,7 @@ app = Flask('')
 
 @app.route('/')
 def home():
-    return "Bot хуярит 24/7!"
+    return "Bot запущен 24/7!"
 
 def run_web():
     app.run(host='0.0.0.0', port=8080)
@@ -791,20 +791,8 @@ def handle_all_messages(message):
             reply_markup=get_main_inline_kb(user_id)
         )
 
-def run_web():
-    app.run(host='0.0.0.0', port=8080)
-
-def keep_alive():
-    t = Thread(target=run_web)
-    t.daemon = True
-    t.start()
-
-# --- ЗАПУСК БОТА + ВЕБ-СЕРВЕР ДЛЯ 24/7 РАБОТЫ ---
-if __name__ == '__main__':
-    print("🚀 Запуск веб-сервера Flask в фоновом режиме...")
-    keep_alive()
-    
-    print("🚀 Запуск опроса Telegram (bot.infinity_polling)...")
+# --- ИДЕАЛЬНЫЙ ЗАПУСК БОТА + FLASK В ОТДЕЛЬНЫХ ПОТОКАХ ---
+def start_bot():
     while True:
         try:
             bot.remove_webhook()
@@ -813,3 +801,12 @@ if __name__ == '__main__':
         except Exception as e:
             print(f"⚠️ Ошибка polling: {e}. Перезапуск через 3 секунды...")
             time.sleep(3)
+
+if __name__ == '__main__':
+    print("🚀 Запуск бота в фоновом потоке...")
+    bot_thread = Thread(target=start_bot)
+    bot_thread.daemon = True
+    bot_thread.start()
+    
+    print("🚀 Запуск веб-сервера Flask для Render...")
+    app.run(host='0.0.0.0', port=8080)
