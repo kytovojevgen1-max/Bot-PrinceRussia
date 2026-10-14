@@ -18,7 +18,7 @@ app = Flask('')
 
 @app.route('/')
 def home():
-    return "Bot запущен 24/7!"
+    return "Bot Prince Russia v1000.0 Ultimate is alive and running 24/7!"
 
 def run_web():
     app.run(host='0.0.0.0', port=8080)
@@ -160,7 +160,7 @@ def get_main_inline_kb(user_id):
         types.InlineKeyboardButton("🌐 Наши Ресурсы", callback_data="btn_links")
     )
     if user_id in db["admins"]:
-        kb.add(types.InlineKeyboardButton("⚙️ Панель Управления", callback_data="btn_admin_panel"))
+        kb.add(types.InlineKeyboardButton("⚙️ Панель Управления v1000", callback_data="btn_admin_panel"))
     return kb
 
 def get_links_inline_kb():
@@ -233,7 +233,7 @@ def start_cmd(message):
 
     coins = db["user_scores"].get(str(user_id), 0)
     welcome_text = (
-        "<b>✨ Добро пожаловать на проект Prince Russia!</b>\n"
+        "<b>✨ Добро пожаловать на проект Prince Russia v1000.0!</b>\n"
         "───────────────────────────────\n"
         "Официальный многофункциональный бот поддержки и сервисов проекта.\n\n"
         f"💰 Ваш баланс: <b>{coins} Prince Coins</b>\n\n"
@@ -246,7 +246,7 @@ def admin_cmd(message):
     user_id = message.chat.id
     register_user(message.from_user)
     if user_id in db["admins"]:
-        bot.send_message(user_id, "<b>⚙️ Панель Управления Команды Проекта:</b>", parse_mode="HTML", reply_markup=get_admin_inline_kb(user_id))
+        bot.send_message(user_id, "<b>⚙️ Панель Управления Команды Проекта (v1000):</b>", parse_mode="HTML", reply_markup=get_admin_inline_kb(user_id))
     else:
         bot.send_message(user_id, "❌ У вас нет доступа к этой команде.")
 
@@ -287,7 +287,7 @@ def callback_handler(call):
         kb.add(types.InlineKeyboardButton("🔙 Назад", callback_data="btn_main_menu"))
         bot.edit_message_text(shop_text, chat_id=user_id, message_id=call.message.message_id, parse_mode="HTML", reply_markup=kb, disable_web_page_preview=True)
 
-    # 🧪 Заявка на тест-сервер
+    # 🧪 Заявка на тест-сервер (Шаг 1)
     elif call.data == "btn_test_server":
         if not db["test_server_open"]:
             bot.answer_callback_query(call.id, "⛔️ Набор на тест-сервер сейчас ЗАКРЫТ!", show_alert=True)
@@ -298,7 +298,7 @@ def callback_handler(call):
         text = (
             "<b>🧪 Заявка на Тест-Сервер Prince Russia</b>\n"
             "───────────────────────────────\n"
-            "<b>Шаг 1 из 3:</b> Введите ваш Игровой Никнейм (например: <code>Alex_Prince</code>):"
+            "<b>Шаг 1 из 4:</b> Введите ваш Игровой Никнейм (например: <code>Alex_Prince</code>):"
         )
         bot.edit_message_text(text, chat_id=user_id, message_id=call.message.message_id, parse_mode="HTML", reply_markup=get_cancel_inline_kb())
 
@@ -445,7 +445,7 @@ def callback_handler(call):
     # Админ Панель
     elif call.data == "btn_admin_panel":
         if user_id in db["admins"]:
-            bot.edit_message_text("<b>⚙️ Панель Управления:</b>", chat_id=user_id, message_id=call.message.message_id, parse_mode="HTML", reply_markup=get_admin_inline_kb(user_id))
+            bot.edit_message_text("<b>⚙️ Панель Управления v1000:</b>", chat_id=user_id, message_id=call.message.message_id, parse_mode="HTML", reply_markup=get_admin_inline_kb(user_id))
         else:
             bot.answer_callback_query(call.id, "Доступ запрещен!", show_alert=True)
 
@@ -463,7 +463,7 @@ def callback_handler(call):
         if user_id in db["admins"]:
             t_status = "ОТКРЫТ 🔓" if db["test_server_open"] else "ЗАКРЫТ 🔒"
             text = (
-                "<b>📊 Статистика проекта Prince Russia:</b>\n"
+                "<b>📊 Статистика проекта Prince Russia (v1000):</b>\n"
                 "───────────────────────────────\n"
                 f"👤 Всего пользователей: <b>{len(db['all_users'])}</b>\n"
                 f"🛠 Администраторов: <b>{len(db['admins'])}</b>\n"
@@ -653,32 +653,39 @@ def handle_all_messages(message):
     state = user_states.get(user_id)
     is_replying = user_id in db["admins"] and admin_reply_targets.get(user_id)
 
-    # 🧪 ПОШАГОВАЯ ЗАЯВКА НА ТЕСТ-СЕРВЕР
+    # 🧪 ПОШАГОВАЯ ЗАЯВКА НА ТЕСТ-СЕРВЕР (4 Шага с VK)
     if state == 'test_step1' and message.content_type == 'text':
         test_applications[user_id]['nick'] = message.text.strip()
         user_states[user_id] = 'test_step2'
-        bot.send_message(user_id, "<b>Шаг 2 из 3:</b> Укажите ваш реальный возраст:", parse_mode="HTML", reply_markup=get_cancel_inline_kb())
+        bot.send_message(user_id, "<b>Шаг 2 из 4:</b> Укажите ваш реальный возраст:", parse_mode="HTML", reply_markup=get_cancel_inline_kb())
         return
 
     elif state == 'test_step2' and message.content_type == 'text':
         test_applications[user_id]['age'] = message.text.strip()
         user_states[user_id] = 'test_step3'
-        bot.send_message(user_id, "<b>Шаг 3 из 3:</b> Опишите ваш опыт в тестировании CRMP/SAMP проектов и сколько времени готовы уделять:", parse_mode="HTML", reply_markup=get_cancel_inline_kb())
+        bot.send_message(user_id, "<b>Шаг 3 из 4:</b> Укажите ссылку на ваш VK (профиль или группу):", parse_mode="HTML", reply_markup=get_cancel_inline_kb())
         return
 
-    elif state == 'test_step3':
+    elif state == 'test_step3' and message.content_type == 'text':
+        test_applications[user_id]['vk'] = message.text.strip()
+        user_states[user_id] = 'test_step4'
+        bot.send_message(user_id, "<b>Шаг 4 из 4:</b> Опишите ваш опыт в тестировании CRMP/SAMP проектов и сколько времени готовы уделять:", parse_mode="HTML", reply_markup=get_cancel_inline_kb())
+        return
+
+    elif state == 'test_step4':
         test_applications[user_id]['exp'] = message.text or message.caption or "Не указано"
         
         app_data = test_applications[user_id]
         uname = f"@{message.from_user.username}" if message.from_user.username else "Нет юзернейма"
 
         card_text = (
-            "🧪 <b>[НОВАЯ ЗАЯВКА НА ТЕСТ-СЕРВЕР]</b>\n"
+            "🧪 <b>[НОВАЯ ЗАЯВКА НА ТЕСТ-СЕРВЕР] v1000</b>\n"
             "───────────────────────────────\n"
             f"👤 <b>Игрок:</b> {message.from_user.first_name} ({uname})\n"
             f"🆔 <b>ID:</b> <code>{user_id}</code>\n"
             f"🎮 <b>Никнейм:</b> <code>{app_data.get('nick')}</code>\n"
             f"🎂 <b>Возраст:</b> {app_data.get('age')}\n"
+            f"🔗 <b>VK:</b> {app_data.get('vk')}\n"
             f"📝 <b>Опыт и готовность:</b> {app_data.get('exp')}"
         )
 
@@ -796,7 +803,7 @@ def start_bot():
     while True:
         try:
             bot.remove_webhook()
-            print("✅ Бот успешно подключен к Telegram API и ожидает сообщения!")
+            print("✅ Бот Prince Russia v1000 успешно подключен к Telegram API и ожидает сообщения!")
             bot.infinity_polling(skip_pending=True, timeout=20, long_polling_timeout=20)
         except Exception as e:
             print(f"⚠️ Ошибка polling: {e}. Перезапуск через 3 секунды...")
