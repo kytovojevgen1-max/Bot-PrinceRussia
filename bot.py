@@ -799,17 +799,17 @@ def keep_alive():
     t.daemon = True
     t.start()
 
-# --- ЗАПУСК БОТА ---
+# --- ЗАПУСК БОТА + ВЕБ-СЕРВЕР ДЛЯ 24/7 РАБОТЫ ---
 if __name__ == '__main__':
-    keep_alive()  # Запускаем Flask в ФОНОВОМ ПОТОКЕ!
-    time.sleep(1)
+    print("🚀 Запуск веб-сервера Flask в фоновом режиме...")
+    keep_alive()
     
-    print("🚀 Запускаем опрос Telegram...")
+    print("🚀 Запуск опроса Telegram (bot.infinity_polling)...")
     while True:
         try:
             bot.remove_webhook()
-            print("✅ Бот Prince Russia успешно запущен и отвечает на команды!")
-            bot.polling(none_stop=True, interval=0, timeout=20)
+            print("✅ Бот успешно подключен к Telegram API и ожидает сообщения!")
+            bot.infinity_polling(skip_pending=True, timeout=20, long_polling_timeout=20)
         except Exception as e:
-            print(f"⚠️ Ошибка сети: {e}. Перезапуск через 5 сек...")
-            time.sleep(5)
+            print(f"⚠️ Ошибка polling: {e}. Перезапуск через 3 секунды...")
+            time.sleep(3)
