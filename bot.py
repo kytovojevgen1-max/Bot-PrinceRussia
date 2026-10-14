@@ -18,7 +18,7 @@ app = Flask('')
 
 @app.route('/')
 def home():
-    return "Prince Russia Ultra Casino & Bot Engine is Online!"
+    return "Prince Russia бот работает 24/7!"
 
 def run_web():
     app.run(host='0.0.0.0', port=8080)
@@ -91,7 +91,6 @@ user_last_messages = {}
 games = {}
 test_applications = {}
 pending_test_actions = {}
-casino_states = {}
 
 def register_user(user):
     user_id = user.id
@@ -99,7 +98,7 @@ def register_user(user):
 
     db["all_users"].add(user_id)
     if str(user_id) not in db["user_scores"]:
-        db["user_scores"][str(user_id)] = 500  # Стартовый бонус для казика!
+        db["user_scores"][str(user_id)] = 500  # Стартовый бонус
 
     uname = user.username.lower() if user.username else None
     if uname:
@@ -291,7 +290,7 @@ def callback_handler(call):
     elif call.data == "btn_casino":
         coins = db["user_scores"].get(str(user_id), 0)
         casino_text = (
-            "<b>🎰 Prince Casino — Уффф, испытай удачу!</b>\n"
+            "<b>🎰 Prince Casino — Испытай удачу!</b>\n"
             "───────────────────────────────\n"
             f"💰 Ваш баланс: <b>{coins} Prince Coins</b>\n\n"
             "Выбирайте режим игры ниже:"
@@ -577,16 +576,16 @@ def handle_all_messages(message):
 
             bot.send_message(user_id, "🎲 Бросаем кости...")
             sent_dice = bot.send_dice(user_id, emoji='🎲')
-            time.sleep(3) # Ждем анимацию броска костей в Telegram
+            time.sleep(3)
             score = sent_dice.dice.value
 
             if score >= 4:
                 win_amount = bet * 2
                 db["user_scores"][str(user_id)] += win_amount
                 save_data()
-                bot.send_message(user_id, f"🎉 <b>УУФФФ! Выпало {score}! Вы выиграли {win_amount} Coins!</b> 🔥", parse_mode="HTML", reply_markup=get_main_inline_kb(user_id))
+                bot.send_message(user_id, f"🎉 <b>Выпало {score}! Вы выиграли {win_amount} Coins!</b> 🔥", parse_mode="HTML", reply_markup=get_main_inline_kb(user_id))
             else:
-                bot.send_message(user_id, f"😢 Выпало {score}. К сожалению, вы проиграли ставку в {bet} Coins.", parse_mode="HTML", reply_markup=get_main_inline_kb(user_id))
+                bot.send_message(user_id, f"😢 Выпало {score}. Вы проиграли ставку в {bet} Coins.", parse_mode="HTML", reply_markup=get_main_inline_kb(user_id))
         return
 
     # ЛОГИКА КАЗИНО: СЛОТЫ
@@ -606,19 +605,18 @@ def handle_all_messages(message):
             time.sleep(3)
             val = sent_slot.dice.value
 
-            # Слоты в телеграме дают значения от 1 до 64 (комбинации)
-            if val in [1, 22, 43, 64]: # Джекпот
+            if val in [1, 22, 43, 64]:
                 win_amount = bet * 5
                 db["user_scores"][str(user_id)] += win_amount
                 save_data()
-                bot.send_message(user_id, f"🎰💎 <b>ДЖЕКПОТ УУФФФ! Вы сорвали куш х5 и получили {win_amount} Coins!</b> 🚀", parse_mode="HTML", reply_markup=get_main_inline_kb(user_id))
+                bot.send_message(user_id, f"🎰💎 <b>ДЖЕКПОТ! Вы сорвали куш х5 и получили {win_amount} Coins!</b> 🚀", parse_mode="HTML", reply_markup=get_main_inline_kb(user_id))
             elif val % 2 == 0:
                 win_amount = int(bet * 1.5)
                 db["user_scores"][str(user_id)] += win_amount
                 save_data()
-                bot.send_message(user_id, f"✨ Отличная комбинация! Вы выиграли {win_amount} Coins!", parse_mode="HTML", reply_markup=get_main_inline_kb(user_id))
+                bot.send_message(user_id, f"✨ Вы выиграли {win_amount} Coins!", parse_mode="HTML", reply_markup=get_main_inline_kb(user_id))
             else:
-                bot.send_message(user_id, f"💨 Почти! В этот раз удача на стороне казино (-{bet} Coins).", parse_mode="HTML", reply_markup=get_main_inline_kb(user_id))
+                bot.send_message(user_id, f"💨 В этот раз не повезло (-{bet} Coins).", parse_mode="HTML", reply_markup=get_main_inline_kb(user_id))
         return
 
     # ВВОД ПРИЧИНЫ ДЛЯ ВЕРДИКТА ПО ТЕСТУ
