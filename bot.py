@@ -7,7 +7,7 @@ import time
 from flask import Flask
 from threading import Thread
 
-TOKEN = "8854430576:AAFmXNrlGrJSfbxMSINFC8tQkX-NVbSjM2w"
+TOKEN = "8854430576:AAHf40hrIusUWGqWjLmp-q2M3okeMsMrw6w"
 DEV_ID = 8543358373  # Твой Telegram ID (Разработчик)
 
 bot = telebot.TeleBot(TOKEN)
@@ -18,7 +18,7 @@ app = Flask('')
 
 @app.route('/')
 def home():
-    return "Bot is alive and running 24/7!"
+    return "Bot хуярит 24/7!"
 
 def run_web():
     app.run(host='0.0.0.0', port=8080)
