@@ -8,7 +8,7 @@ from flask import Flask
 from threading import Thread
 from datetime import datetime
 
-TOKEN = "8854430576:AAFFnW7WXydJRzvkrsFzw1KOy8cTikSxEWQ"
+TOKEN = "8854430576:AAHHp4XrZ9vLvKfrYBvMqFQPsXtSM4hDOXE"
 DEV_ID = 8543358373  # Твой Telegram ID (Разработчик / Владелец)
 
 bot = telebot.TeleBot(TOKEN)
